@@ -2,7 +2,7 @@
 
 `[ad] Opens & Previous Day H/L` is a Pine Script v6 indicator that draws the key reference levels many traders watch:
 
-- **Yearly Open (YO)**, **Monthly Open (MO)**, **Weekly Open (WO)** and **Daily Open (DO)**
+- **Yearly Open (`yOpen`)**, **Monthly Open (`mOpen`)**, **Weekly Open (`wOpen`)** and **Daily Open (`DO`)**
 - **Previous Day High / Low (PDH / PDL)**
 - optional **Previous Week High / Low (PWH / PWL)** and **Previous Month High / Low (PMH / PML)**
 
@@ -12,7 +12,8 @@ Every level is a thin 1 px line that starts on the candle where its period opene
 
 - Period opens and previous highs/lows are requested from the higher timeframe with `request.security()` using the `lookahead_on` + `[1]` pattern. Only values that are already final are used, so levels do not repaint: an open is known as soon as its period starts, and a previous high/low comes from the last completed period.
 - The label background uses the chart background color, which cuts the line behind the text. This can be switched off.
-- Levels that share a price are merged into one label, for example `WO / DO` on a Monday (the first daily bar of the week has the same open as the week) or `YO / MO / WO / DO` on the first trading day of a year.
+- Levels that share a price are merged into one label, for example `wOpen / DO` on a Monday (the first daily bar of the week has the same open as the week) or `yOpen / mOpen / wOpen / DO` on the first trading day of a year.
+- Labels of levels that are close to each other would cover one another, so they are moved apart horizontally. The spacing is calculated from the visible price range and the number of visible bars, so it follows your zoom level.
 - A level is hidden when its period is shorter than the chart timeframe: a weekly chart shows no daily levels, a monthly chart shows only monthly and yearly levels.
 - If a period started before the first loaded candle, the line begins at the left edge of the loaded history; the price is still correct because it comes from the higher timeframe.
 - The Data Window lists the current value of every level; those plots never change the price scale.
@@ -20,7 +21,7 @@ Every level is a thin 1 px line that starts on the candle where its period opene
 
 ## Settings
 
-**Levels** - switch each of the ten levels on or off. Defaults: YO, MO, WO, DO, PDH, PDL on; PWH, PWL, PMH, PML off.
+**Levels** - switch each of the ten levels on or off. Defaults: yOpen, mOpen, wOpen, DO, PDH, PDL on; PWH, PWL, PMH, PML off.
 
 **Lines**
 - Line end: `Full width` (the line runs to the right edge of the chart) or `Fixed distance` (it stops a set number of bars after the last candle; the label sits in the middle of that part).
@@ -28,12 +29,13 @@ Every level is a thin 1 px line that starts on the candle where its period opene
 
 **Labels**
 - Show labels, text size (Small 9, Medium 11, Large 14; default Medium).
-- Short names (`DO`, `PDH`, ...) or full names (`Daily Open`, `Prev Day High`, ...).
+- Short names (`yOpen`, `mOpen`, `wOpen`, `DO`, `PDH`, ...) or full names (`Yearly Open`, `Daily Open`, `Prev Day High`, ...).
 - Show price in label (off by default).
 - Cut the line behind the label (on by default).
+- Avoid overlapping labels (on by default; works with the Full width line end).
 - Label position: `Next to last candle` (always on screen) or `Fixed offset` with an offset in bars (needs a right margin of at least that many bars).
 
-**Colors** - Yearly Open, Monthly Open, Weekly Open, Daily Open, previous highs and previous lows. Defaults are orange, pink-red, white, grey, red and blue. The white Weekly Open is easy to read on dark and beige charts; change it if your chart background is white.
+**Colors** - Yearly Open, Monthly Open, Weekly Open, Daily Open, previous highs and previous lows. Defaults: Yearly, Monthly and Weekly Open share one pink-red, Daily Open is grey, previous highs are red and previous lows are blue. Each color can be changed on its own.
 
 ## Installation
 

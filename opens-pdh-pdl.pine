@@ -1,11 +1,11 @@
 // This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 //@version=6
-indicator("[ad] Opens & Previous Day H/L", shorttitle = "[ad] Opens", overlay = true, max_lines_count = 50, max_labels_count = 50)
+indicator("[ad] Opens & Previous Day H/L", shorttitle = "[ad] Opens", overlay = true, max_lines_count = 50, max_labels_count = 50, max_bars_back = 5000)
 
 // Yearly / Monthly / Weekly / Daily Open and the previous Day / Week / Month High and Low.
 // Every level starts on the candle where its period opened (or where the previous period began)
 // and is drawn as a thin line with a short text label sitting in the middle of the line.
-// Levels that share a price (for example DO and WO on Monday) are merged into one label.
+// Levels that share a price (for example DO and wOpen on Monday) are merged into one label.
 //
 // Data comes from request.security() with the lookahead_on + [1] pattern, so only values that are
 // already known are used: period opens are known at the start of the period, previous highs and
@@ -21,9 +21,9 @@ string END_FIXED = "Fixed distance"
 string POS_NEAR = "Next to last candle"
 string POS_FIXED = "Fixed offset"
 
-bool showYoInput = input.bool(true, "Yearly Open (YO)", group = GROUP_LEVELS)
-bool showMoInput = input.bool(true, "Monthly Open (MO)", group = GROUP_LEVELS)
-bool showWoInput = input.bool(true, "Weekly Open (WO)", group = GROUP_LEVELS)
+bool showYoInput = input.bool(true, "Yearly Open (yOpen)", group = GROUP_LEVELS)
+bool showMoInput = input.bool(true, "Monthly Open (mOpen)", group = GROUP_LEVELS)
+bool showWoInput = input.bool(true, "Weekly Open (wOpen)", group = GROUP_LEVELS)
 bool showDoInput = input.bool(true, "Daily Open (DO)", group = GROUP_LEVELS)
 bool showPdhInput = input.bool(true, "Previous Day High (PDH)", group = GROUP_LEVELS)
 bool showPdlInput = input.bool(true, "Previous Day Low (PDL)", group = GROUP_LEVELS)
@@ -39,21 +39,24 @@ int lineWidthInput = input.int(1, "Line width", minval = 1, maxval = 4, group = 
 
 bool showLabelsInput = input.bool(true, "Show labels", group = GROUP_LABELS)
 string labelSizeInput = input.string("Medium", "Text size", options = ["Small", "Medium", "Large"], tooltip = "Small = 9, Medium = 11, Large = 14.", group = GROUP_LABELS)
-bool shortNamesInput = input.bool(true, "Short names", tooltip = "YO, MO, WO, DO, PDH, PDL ... instead of Yearly Open, Monthly Open, Weekly Open, Daily Open, Prev Day High, Prev Day Low ...", group = GROUP_LABELS)
+bool shortNamesInput = input.bool(true, "Short names", tooltip = "yOpen, mOpen, wOpen, DO, PDH, PDL ... instead of Yearly Open, Monthly Open, Weekly Open, Daily Open, Prev Day High, Prev Day Low ...", group = GROUP_LABELS)
 bool showPriceInput = input.bool(false, "Show price in label", group = GROUP_LABELS)
 bool cutLineInput = input.bool(true, "Cut the line behind the label", tooltip = "Fills the label with the chart background so the text looks like it sits inside the line.", group = GROUP_LABELS)
+bool avoidOverlapInput = input.bool(true, "Avoid overlapping labels", tooltip = "Moves the labels of nearby levels apart horizontally so they do not cover each other. The spacing follows your zoom level. Works with the Full width line end.", group = GROUP_LABELS)
 string labelPositionInput = input.string(POS_NEAR, "Label position", options = [POS_NEAR, POS_FIXED], tooltip = "Next to last candle: labels sit just right of the last candle, so they are always on screen. Fixed offset: labels sit a set number of bars right of the last candle; it needs a right margin of at least that many bars.", group = GROUP_LABELS)
 int labelOffsetInput = input.int(60, "Label offset (bars right of last candle)", minval = 1, maxval = 450, tooltip = "Used with Full width and the Fixed offset position. Increase it to move the labels towards the right edge, decrease it if they fall outside your screen.", group = GROUP_LABELS)
 
-color yoColorInput = input.color(color.rgb(255, 152, 0), "Yearly Open", group = GROUP_COLORS)
+color yoColorInput = input.color(color.rgb(231, 31, 101), "Yearly Open", group = GROUP_COLORS)
 color moColorInput = input.color(color.rgb(231, 31, 101), "Monthly Open", group = GROUP_COLORS)
-color woColorInput = input.color(color.rgb(255, 255, 255), "Weekly Open", group = GROUP_COLORS)
+color woColorInput = input.color(color.rgb(231, 31, 101), "Weekly Open", group = GROUP_COLORS)
 color doColorInput = input.color(color.rgb(120, 123, 134), "Daily Open", group = GROUP_COLORS)
 color highColorInput = input.color(color.rgb(239, 83, 80), "Previous highs (PDH / PWH / PMH)", group = GROUP_COLORS)
 color lowColorInput = input.color(color.rgb(66, 165, 245), "Previous lows (PDL / PWL / PML)", group = GROUP_COLORS)
 
 int LEVEL_COUNT = 10
 int NEAR_OFFSET_BARS = 5
+float LABEL_GAP_RATIO = 0.04
+float STAGGER_RATIO = 0.06
 
 // Open of the current period, start of the current and of the previous period, and the
 // high / low of the last completed period. Only values that are already final are requested.
@@ -91,12 +94,12 @@ if barstate.islast
     array<float> prices = array.from(yoLevel, moLevel, woLevel, doLevel, pdhLevel, pdlLevel, pwhLevel, pwlLevel, pmhLevel, pmlLevel)
     array<int> origins = array.from(yStart, mStart, wStart, dStart, dStart1, dStart1, wStart1, wStart1, mStart1, mStart1)
     array<color> colors = array.from(yoColorInput, moColorInput, woColorInput, doColorInput, highColorInput, lowColorInput, highColorInput, lowColorInput, highColorInput, lowColorInput)
-    array<string> names = shortNamesInput ? array.from("YO", "MO", "WO", "DO", "PDH", "PDL", "PWH", "PWL", "PMH", "PML") : array.from("Yearly Open", "Monthly Open", "Weekly Open", "Daily Open", "Prev Day High", "Prev Day Low", "Prev Week High", "Prev Week Low", "Prev Month High", "Prev Month Low")
+    array<string> names = shortNamesInput ? array.from("yOpen", "mOpen", "wOpen", "DO", "PDH", "PDL", "PWH", "PWL", "PMH", "PML") : array.from("Yearly Open", "Monthly Open", "Weekly Open", "Daily Open", "Prev Day High", "Prev Day Low", "Prev Week High", "Prev Week Low", "Prev Month High", "Prev Month Low")
 
     bool fullWidth = lineEndInput == END_FULL
     int barMs = chartSeconds * 1000
     int endTime = time_close + (fullWidth ? 0 : barMs * distanceInput)
-    int labelX = bar_index + (not fullWidth ? math.max(1, distanceInput / 2) : labelPositionInput == POS_NEAR ? NEAR_OFFSET_BARS : labelOffsetInput)
+    int baseX = bar_index + (not fullWidth ? math.max(1, distanceInput / 2) : labelPositionInput == POS_NEAR ? NEAR_OFFSET_BARS : labelOffsetInput)
     int labelPx = labelSizeInput == "Small" ? 9 : labelSizeInput == "Large" ? 14 : 11
     color labelBg = cutLineInput ? chart.bg_color : color.new(chart.bg_color, 100)
     string lineStyle = lineStyleOf(lineStyleInput)
@@ -118,6 +121,46 @@ if barstate.islast
             string current = array.get(texts, owner)
             string name = array.get(names, index)
             array.set(texts, owner, current == "" ? name : current + " / " + name)
+
+    // Keep the labels of nearby levels apart. A label is about 4% of the visible price range tall, so
+    // levels closer than that get their labels shifted right by 6% of the visible bars, one step each.
+    array<int> slots = array.new<int>(LEVEL_COUNT, 0)
+    int stepBars = 3
+    if avoidOverlapInput and fullWidth
+        float visibleHigh = high
+        float visibleLow = low
+        int visibleBars = 1
+        for back = 0 to math.min(bar_index, 4999)
+            if time[back] < chart.left_visible_bar_time
+                break
+            visibleHigh := math.max(visibleHigh, high[back])
+            visibleLow := math.min(visibleLow, low[back])
+            visibleBars := back + 1
+        float labelGap = (visibleHigh - visibleLow) * LABEL_GAP_RATIO
+        stepBars := math.max(3, int(math.round(visibleBars * STAGGER_RATIO)))
+
+        array<int> order = array.new<int>()
+        for index = 0 to LEVEL_COUNT - 1
+            if array.get(owners, index) == index
+                array.push(order, index)
+        if array.size(order) > 1
+            for outer = 1 to array.size(order) - 1
+                int key = array.get(order, outer)
+                float keyPrice = array.get(prices, key)
+                int inner = outer - 1
+                while inner >= 0 and array.get(prices, array.get(order, inner)) > keyPrice
+                    array.set(order, inner + 1, array.get(order, inner))
+                    inner -= 1
+                array.set(order, inner + 1, key)
+            float previousPrice = na
+            int previousSlot = 0
+            for position = 0 to array.size(order) - 1
+                int owner = array.get(order, position)
+                float ownerPrice = array.get(prices, owner)
+                int slot = not na(previousPrice) and ownerPrice - previousPrice < labelGap ? previousSlot + 1 : 0
+                array.set(slots, owner, slot)
+                previousSlot := slot
+                previousPrice := ownerPrice
 
     for index = 0 to LEVEL_COUNT - 1
         float price = array.get(prices, index)
@@ -147,6 +190,7 @@ if barstate.islast
 
             bool ownsLabel = showLabelsInput and array.get(owners, index) == index
             if ownsLabel
+                int labelX = baseX + array.get(slots, index) * stepBars
                 string labelText = array.get(texts, index) + (showPriceInput ? " " + str.tostring(price, format.mintick) : "")
                 if na(currentLabel)
                     currentLabel := label.new(labelX, price, labelText, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_center, color = labelBg, textcolor = levelColor, size = labelPx, textalign = text.align_center)
