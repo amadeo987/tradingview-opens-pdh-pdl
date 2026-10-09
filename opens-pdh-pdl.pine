@@ -5,7 +5,7 @@ indicator("[ad] Opens & Previous Day H/L", shorttitle = "[ad] Opens", overlay = 
 // Yearly / Monthly / Weekly / Daily Open and the previous Day / Week / Month High and Low.
 // Every level starts on the candle where its period opened (or where the previous period began)
 // and is drawn as a thin line with a short text label sitting in the middle of the line.
-// Levels that share a price (for example DO and wOpen on Monday) are merged into one label.
+// Levels that share a price (for example dOpen and wOpen on Monday) are merged into one label.
 //
 // Data comes from request.security() with the lookahead_on + [1] pattern, so only values that are
 // already known are used: period opens are known at the start of the period, previous highs and
@@ -24,7 +24,7 @@ string POS_FIXED = "Fixed offset"
 bool showYoInput = input.bool(true, "Yearly Open (yOpen)", group = GROUP_LEVELS)
 bool showMoInput = input.bool(true, "Monthly Open (mOpen)", group = GROUP_LEVELS)
 bool showWoInput = input.bool(true, "Weekly Open (wOpen)", group = GROUP_LEVELS)
-bool showDoInput = input.bool(true, "Daily Open (DO)", group = GROUP_LEVELS)
+bool showDoInput = input.bool(true, "Daily Open (dOpen)", group = GROUP_LEVELS)
 bool showPdhInput = input.bool(true, "Previous Day High (PDH)", group = GROUP_LEVELS)
 bool showPdlInput = input.bool(true, "Previous Day Low (PDL)", group = GROUP_LEVELS)
 bool showPwhInput = input.bool(false, "Previous Week High (PWH)", group = GROUP_LEVELS)
@@ -32,17 +32,17 @@ bool showPwlInput = input.bool(false, "Previous Week Low (PWL)", group = GROUP_L
 bool showPmhInput = input.bool(false, "Previous Month High (PMH)", group = GROUP_LEVELS)
 bool showPmlInput = input.bool(false, "Previous Month Low (PML)", group = GROUP_LEVELS)
 
-string lineEndInput = input.string(END_FULL, "Line end", options = [END_FULL, END_FIXED], tooltip = "Full width: the line runs from its start to the right edge of the chart. Fixed distance: the line stops a set number of bars after the last candle.", group = GROUP_LINES)
-int distanceInput = input.int(30, "Fixed distance (bars)", minval = 1, maxval = 450, tooltip = "Used only with Fixed distance. The label is placed in the middle of the part of the line that sticks out past the last candle.", group = GROUP_LINES)
+string lineEndInput = input.string(END_FIXED, "Line end", options = [END_FULL, END_FIXED], tooltip = "Full width: the line runs from its start to the right edge of the chart. Fixed distance: the line stops a set number of bars after the last candle.", group = GROUP_LINES)
+int distanceInput = input.int(90, "Fixed distance (bars)", minval = 1, maxval = 450, tooltip = "Used only with Fixed distance. The label is placed in the middle of the part of the line that sticks out past the last candle.", group = GROUP_LINES)
 string lineStyleInput = input.string("Solid", "Line style", options = ["Solid", "Dashed", "Dotted"], group = GROUP_LINES)
 int lineWidthInput = input.int(1, "Line width", minval = 1, maxval = 4, group = GROUP_LINES)
 
 bool showLabelsInput = input.bool(true, "Show labels", group = GROUP_LABELS)
-string labelSizeInput = input.string("Medium", "Text size", options = ["Small", "Medium", "Large"], tooltip = "Small = 9, Medium = 11, Large = 14.", group = GROUP_LABELS)
-bool shortNamesInput = input.bool(true, "Short names", tooltip = "yOpen, mOpen, wOpen, DO, PDH, PDL ... instead of Yearly Open, Monthly Open, Weekly Open, Daily Open, Prev Day High, Prev Day Low ...", group = GROUP_LABELS)
-bool showPriceInput = input.bool(false, "Show price in label", group = GROUP_LABELS)
+string labelSizeInput = input.string("Medium", "Text size", options = ["Small", "Medium", "Large"], tooltip = "Small = 8, Medium = 10, Large = 12.", group = GROUP_LABELS)
+bool shortNamesInput = input.bool(true, "Short names", tooltip = "yOpen, mOpen, wOpen, dOpen, PDH, PDL ... instead of Yearly Open, Monthly Open, Weekly Open, Daily Open, Prev Day High, Prev Day Low ...", group = GROUP_LABELS)
+bool showPriceInput = input.bool(false, "Show price in label", tooltip = "Adds the price in brackets, for example yOpen (87643.3).", group = GROUP_LABELS)
 bool cutLineInput = input.bool(true, "Cut the line behind the label", tooltip = "Fills the label with the chart background so the text looks like it sits inside the line.", group = GROUP_LABELS)
-bool avoidOverlapInput = input.bool(true, "Avoid overlapping labels", tooltip = "Moves the labels of nearby levels apart horizontally so they do not cover each other. The spacing follows your zoom level. Works with the Full width line end.", group = GROUP_LABELS)
+bool avoidOverlapInput = input.bool(true, "Avoid overlapping labels", tooltip = "Moves the labels of nearby levels apart horizontally so they do not cover each other. The spacing follows your zoom level.", group = GROUP_LABELS)
 string labelPositionInput = input.string(POS_NEAR, "Label position", options = [POS_NEAR, POS_FIXED], tooltip = "Next to last candle: labels sit just right of the last candle, so they are always on screen. Fixed offset: labels sit a set number of bars right of the last candle; it needs a right margin of at least that many bars.", group = GROUP_LABELS)
 int labelOffsetInput = input.int(60, "Label offset (bars right of last candle)", minval = 1, maxval = 450, tooltip = "Used with Full width and the Fixed offset position. Increase it to move the labels towards the right edge, decrease it if they fall outside your screen.", group = GROUP_LABELS)
 
@@ -94,13 +94,13 @@ if barstate.islast
     array<float> prices = array.from(yoLevel, moLevel, woLevel, doLevel, pdhLevel, pdlLevel, pwhLevel, pwlLevel, pmhLevel, pmlLevel)
     array<int> origins = array.from(yStart, mStart, wStart, dStart, dStart1, dStart1, wStart1, wStart1, mStart1, mStart1)
     array<color> colors = array.from(yoColorInput, moColorInput, woColorInput, doColorInput, highColorInput, lowColorInput, highColorInput, lowColorInput, highColorInput, lowColorInput)
-    array<string> names = shortNamesInput ? array.from("yOpen", "mOpen", "wOpen", "DO", "PDH", "PDL", "PWH", "PWL", "PMH", "PML") : array.from("Yearly Open", "Monthly Open", "Weekly Open", "Daily Open", "Prev Day High", "Prev Day Low", "Prev Week High", "Prev Week Low", "Prev Month High", "Prev Month Low")
+    array<string> names = shortNamesInput ? array.from("yOpen", "mOpen", "wOpen", "dOpen", "PDH", "PDL", "PWH", "PWL", "PMH", "PML") : array.from("Yearly Open", "Monthly Open", "Weekly Open", "Daily Open", "Prev Day High", "Prev Day Low", "Prev Week High", "Prev Week Low", "Prev Month High", "Prev Month Low")
 
     bool fullWidth = lineEndInput == END_FULL
     int barMs = chartSeconds * 1000
     int endTime = time_close + (fullWidth ? 0 : barMs * distanceInput)
-    int baseX = bar_index + (not fullWidth ? math.max(1, distanceInput / 2) : labelPositionInput == POS_NEAR ? NEAR_OFFSET_BARS : labelOffsetInput)
-    int labelPx = labelSizeInput == "Small" ? 9 : labelSizeInput == "Large" ? 14 : 11
+    int baseOffset = not fullWidth ? math.max(1, int(math.round(distanceInput / 2.0))) : labelPositionInput == POS_NEAR ? NEAR_OFFSET_BARS : labelOffsetInput
+    int labelPx = labelSizeInput == "Small" ? 8 : labelSizeInput == "Large" ? 12 : 10
     color labelBg = cutLineInput ? chart.bg_color : color.new(chart.bg_color, 100)
     string lineStyle = lineStyleOf(lineStyleInput)
 
@@ -123,10 +123,11 @@ if barstate.islast
             array.set(texts, owner, current == "" ? name : current + " / " + name)
 
     // Keep the labels of nearby levels apart. A label is about 4% of the visible price range tall, so
-    // levels closer than that get their labels shifted right by 6% of the visible bars, one step each.
+    // levels closer than that get their labels shifted by 6% of the visible bars per step: to the right
+    // with Full width, alternately right and left of the middle with Fixed distance.
     array<int> slots = array.new<int>(LEVEL_COUNT, 0)
     int stepBars = 3
-    if avoidOverlapInput and fullWidth
+    if avoidOverlapInput
         float visibleHigh = high
         float visibleLow = low
         int visibleBars = 1
@@ -190,8 +191,13 @@ if barstate.islast
 
             bool ownsLabel = showLabelsInput and array.get(owners, index) == index
             if ownsLabel
-                int labelX = baseX + array.get(slots, index) * stepBars
-                string labelText = array.get(texts, index) + (showPriceInput ? " " + str.tostring(price, format.mintick) : "")
+                int slot = array.get(slots, index)
+                int shift = fullWidth ? slot : (slot % 2 == 1 ? (slot + 1) / 2 : -(slot / 2))
+                int labelOffset = baseOffset + int(shift) * stepBars
+                if not fullWidth
+                    labelOffset := math.max(2, math.min(distanceInput - 2, labelOffset))
+                int labelX = bar_index + labelOffset
+                string labelText = array.get(texts, index) + (showPriceInput ? " (" + str.tostring(price, format.mintick) + ")" : "")
                 if na(currentLabel)
                     currentLabel := label.new(labelX, price, labelText, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_center, color = labelBg, textcolor = levelColor, size = labelPx, textalign = text.align_center)
                     array.set(levelLabels, index, currentLabel)
