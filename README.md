@@ -15,7 +15,7 @@ Every level is a thin 1 px line that starts on the candle where its period opene
 - Levels that share a price are merged into one label, for example `wOpen / dOpen` on a Monday (the first daily bar of the week has the same open as the week) or `yOpen / mOpen / wOpen / dOpen` on the first trading day of a year.
 - Labels of levels that are close to each other would cover one another, so they are moved apart horizontally (to the right with Full width, alternately right and left of the middle with Fixed distance). The spacing is calculated from the visible price range and the number of visible bars, so it follows your zoom level.
 - A level is hidden when its period is shorter than the chart timeframe: a weekly chart shows no daily levels, a monthly chart shows only monthly and yearly levels.
-- If a period started before the first loaded candle, the line begins at the left edge of the loaded history; the price is still correct because it comes from the higher timeframe.
+- Lines start on the bar where their period began. If the period began before the first loaded candle, the line starts at the first loaded candle (and never more than 4900 bars before the last one); the price is still correct because it comes from the higher timeframe.
 - The Data Window lists the current value of every level; those plots never change the price scale.
 - All drawing happens on the last bar and reuses a fixed set of ten lines and ten labels, so object counts stay low.
 
@@ -37,6 +37,11 @@ Every level is a thin 1 px line that starts on the candle where its period opene
 
 **Colors** - Yearly Open, Monthly Open, Weekly Open, Daily Open, previous highs and previous lows. Defaults: Yearly, Monthly and Weekly Open share one pink-red, Daily Open is grey, previous highs are red and previous lows are blue. Each color can be changed on its own.
 
+## Where to get it
+
+- TradingView: [[ad] Opens & Previous Day H/L](https://www.tradingview.com/script/bj1IB49A-ad-Opens-Previous-Day-H-L/) (open-source publication, add it to a chart with "Add to favorites" / "Use on chart").
+- Source code: this repository.
+
 ## Installation
 
 1. Open the Pine Editor in TradingView.
@@ -54,7 +59,7 @@ Every level is a thin 1 px line that starts on the candle where its period opene
 
 ## Version
 
-1.0.0 - see [CHANGELOG.md](CHANGELOG.md).
+1.0.4 - see [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

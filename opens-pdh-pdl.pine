@@ -7,9 +7,14 @@ indicator("[ad] Opens & Previous Day H/L", shorttitle = "[ad] Opens", overlay = 
 // and is drawn as a thin line with a short text label sitting in the middle of the line.
 // Levels that share a price (for example dOpen and wOpen on Monday) are merged into one label.
 //
-// Data comes from request.security() with the lookahead_on + [1] pattern, so only values that are
+// Prices come from request.security() with the lookahead_on + [1] pattern, so only values that are
 // already known are used: period opens are known at the start of the period, previous highs and
 // lows come from the last completed period. Nothing repaints.
+// Line starts are bar indexes of the chart: the bar where each period began (bar 0 when the period
+// began before the first loaded candle). TradingView refuses drawings placed too far from the current
+// bar, so a line never starts more than MAX_LINE_BARS_BACK bars before the last candle. Lines also never
+// start on the very first bars of the loaded history: the chart preview of a publication does not draw a line
+// that begins exactly on the first loaded bar.
 
 string GROUP_LEVELS = "Levels"
 string GROUP_LINES = "Lines"
@@ -57,13 +62,16 @@ int LEVEL_COUNT = 10
 int NEAR_OFFSET_BARS = 5
 float LABEL_GAP_RATIO = 0.04
 float STAGGER_RATIO = 0.06
+int MIN_STAGGER_BARS = 8
+int MAX_LINE_BARS_BACK = 4900
+int MIN_LINE_START_BAR = 3
 
-// Open of the current period, start of the current and of the previous period, and the
-// high / low of the last completed period. Only values that are already final are requested.
-[dOpen, dStart, dHigh1, dLow1, dStart1] = request.security(syminfo.tickerid, "D", [open, time, high[1], low[1], time[1]], lookahead = barmerge.lookahead_on)
-[wOpen, wStart, wHigh1, wLow1, wStart1] = request.security(syminfo.tickerid, "W", [open, time, high[1], low[1], time[1]], lookahead = barmerge.lookahead_on)
-[mOpen, mStart, mHigh1, mLow1, mStart1] = request.security(syminfo.tickerid, "M", [open, time, high[1], low[1], time[1]], lookahead = barmerge.lookahead_on)
-[yOpen, yStart, yHigh1, yLow1, yStart1] = request.security(syminfo.tickerid, "12M", [open, time, high[1], low[1], time[1]], lookahead = barmerge.lookahead_on)
+// Open of the current period and high / low of the last completed period. Only values that are
+// already final are requested.
+[dOpen, dHigh1, dLow1] = request.security(syminfo.tickerid, "D", [open, high[1], low[1]], lookahead = barmerge.lookahead_on)
+[wOpen, wHigh1, wLow1] = request.security(syminfo.tickerid, "W", [open, high[1], low[1]], lookahead = barmerge.lookahead_on)
+[mOpen, mHigh1, mLow1] = request.security(syminfo.tickerid, "M", [open, high[1], low[1]], lookahead = barmerge.lookahead_on)
+[yOpen, yHigh1, yLow1] = request.security(syminfo.tickerid, "12M", [open, high[1], low[1]], lookahead = barmerge.lookahead_on)
 
 // A level is hidden when its period is shorter than the chart timeframe (no daily open on a weekly chart).
 int chartSeconds = timeframe.in_seconds()
@@ -84,6 +92,28 @@ float pwlLevel = showPwlInput and weeklyOk ? wLow1 : na
 float pmhLevel = showPmhInput and monthlyOk ? mHigh1 : na
 float pmlLevel = showPmlInput and monthlyOk ? mLow1 : na
 
+// Bar index where the current and the previous period of each timeframe began.
+var int yIdx = 0
+var int yPrevIdx = 0
+var int mIdx = 0
+var int mPrevIdx = 0
+var int wIdx = 0
+var int wPrevIdx = 0
+var int dIdx = 0
+var int dPrevIdx = 0
+if timeframe.change("12M")
+    yPrevIdx := yIdx
+    yIdx := bar_index
+if timeframe.change("M")
+    mPrevIdx := mIdx
+    mIdx := bar_index
+if timeframe.change("W")
+    wPrevIdx := wIdx
+    wIdx := bar_index
+if timeframe.change("D")
+    dPrevIdx := dIdx
+    dIdx := bar_index
+
 var array<line> levelLines = array.new<line>(LEVEL_COUNT)
 var array<label> levelLabels = array.new<label>(LEVEL_COUNT)
 
@@ -92,13 +122,12 @@ lineStyleOf(string name) =>
 
 if barstate.islast
     array<float> prices = array.from(yoLevel, moLevel, woLevel, doLevel, pdhLevel, pdlLevel, pwhLevel, pwlLevel, pmhLevel, pmlLevel)
-    array<int> origins = array.from(yStart, mStart, wStart, dStart, dStart1, dStart1, wStart1, wStart1, mStart1, mStart1)
+    array<int> origins = array.from(yIdx, mIdx, wIdx, dIdx, dPrevIdx, dPrevIdx, wPrevIdx, wPrevIdx, mPrevIdx, mPrevIdx)
     array<color> colors = array.from(yoColorInput, moColorInput, woColorInput, doColorInput, highColorInput, lowColorInput, highColorInput, lowColorInput, highColorInput, lowColorInput)
     array<string> names = shortNamesInput ? array.from("yOpen", "mOpen", "wOpen", "dOpen", "PDH", "PDL", "PWH", "PWL", "PMH", "PML") : array.from("Yearly Open", "Monthly Open", "Weekly Open", "Daily Open", "Prev Day High", "Prev Day Low", "Prev Week High", "Prev Week Low", "Prev Month High", "Prev Month Low")
 
     bool fullWidth = lineEndInput == END_FULL
-    int barMs = chartSeconds * 1000
-    int endTime = time_close + (fullWidth ? 0 : barMs * distanceInput)
+    int endIndex = bar_index + (fullWidth ? 1 : distanceInput)
     int baseOffset = not fullWidth ? math.max(1, int(math.round(distanceInput / 2.0))) : labelPositionInput == POS_NEAR ? NEAR_OFFSET_BARS : labelOffsetInput
     int labelPx = labelSizeInput == "Small" ? 8 : labelSizeInput == "Large" ? 12 : 10
     color labelBg = cutLineInput ? chart.bg_color : color.new(chart.bg_color, 100)
@@ -126,7 +155,7 @@ if barstate.islast
     // levels closer than that get their labels shifted by 6% of the visible bars per step: to the right
     // with Full width, alternately right and left of the middle with Fixed distance.
     array<int> slots = array.new<int>(LEVEL_COUNT, 0)
-    int stepBars = 3
+    int stepBars = MIN_STAGGER_BARS
     if avoidOverlapInput
         float visibleHigh = high
         float visibleLow = low
@@ -138,7 +167,7 @@ if barstate.islast
             visibleLow := math.min(visibleLow, low[back])
             visibleBars := back + 1
         float labelGap = (visibleHigh - visibleLow) * LABEL_GAP_RATIO
-        stepBars := math.max(3, int(math.round(visibleBars * STAGGER_RATIO)))
+        stepBars := math.max(MIN_STAGGER_BARS, int(math.round(visibleBars * STAGGER_RATIO)))
 
         array<int> order = array.new<int>()
         for index = 0 to LEVEL_COUNT - 1
@@ -176,14 +205,14 @@ if barstate.islast
                 array.set(levelLabels, index, na)
         else
             color levelColor = array.get(colors, index)
-            int startTime = array.get(origins, index)
-            int lastTime = math.max(endTime, startTime + barMs)
+            int startIndex = math.max(array.get(origins, index), bar_index - MAX_LINE_BARS_BACK, MIN_LINE_START_BAR)
+            int lastIndex = math.max(endIndex, startIndex + 1)
             if na(currentLine)
-                currentLine := line.new(startTime, price, lastTime, price, xloc = xloc.bar_time, extend = fullWidth ? extend.right : extend.none, color = levelColor, style = lineStyle, width = lineWidthInput)
+                currentLine := line.new(startIndex, price, lastIndex, price, xloc = xloc.bar_index, extend = fullWidth ? extend.right : extend.none, color = levelColor, style = lineStyle, width = lineWidthInput)
                 array.set(levelLines, index, currentLine)
             else
-                line.set_xy1(currentLine, startTime, price)
-                line.set_xy2(currentLine, lastTime, price)
+                line.set_xy1(currentLine, startIndex, price)
+                line.set_xy2(currentLine, lastIndex, price)
                 line.set_extend(currentLine, fullWidth ? extend.right : extend.none)
                 line.set_color(currentLine, levelColor)
                 line.set_style(currentLine, lineStyle)

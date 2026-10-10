@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.0.4 - 2026-10-10
+
+- Lines never start on the first 3 bars of the loaded history. The chart preview of a publication did not draw a line that began exactly on the first loaded bar (the Yearly Open), although the label was shown.
+
+## 1.0.3 - 2026-10-10
+
+- Line starts are now bar indexes of the chart instead of timestamps: each line begins on the bar where its period started, or on the first loaded bar (at most 4900 bars before the last one) when the period began earlier. This draws long-running levels such as the Yearly Open reliably on every timeframe and in the chart preview of a publication, and avoids TradingView's "too far from the current bar index" error on deep intraday history.
+
+## 1.0.2 - 2026-10-10
+
+- Lines no longer started more than 50 bars before the left edge of the visible chart (replaced in 1.0.3 by bar-index line starts).
+
+## 1.0.1 - 2026-10-10
+
+- Lines now start no earlier than the first loaded candle, so levels whose period began long ago (for example the Yearly Open on an intraday chart) are drawn even when little history is loaded.
+- Labels of nearby levels are moved apart by at least 8 bars, so they no longer cover each other when only a few candles are visible.
+
 ## 1.0.0 - 2026-10-10
 
 - First release.
