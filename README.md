@@ -1,4 +1,4 @@
-# Opens & Previous Day H/L for TradingView
+# [ad] Opens & Previous Day H/L
 
 `[ad] Opens & Previous Day H/L` is a Pine Script v6 indicator that draws the key reference levels many traders watch:
 
